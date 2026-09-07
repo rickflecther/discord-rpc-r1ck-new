@@ -1,1 +1,77 @@
-"use strict";\n\nconst express = require("express");\nconst { ActivityType, Client, GatewayIntentBits } = require("discord.js");\n\nconst PORT = Number(process.env.PORT || 3000);\nconst HOST = process.env.HOST || "0.0.0.0";\nconst TOKEN = process.env.DISCORD_BOT_TOKEN;\nconst presenceName = process.env.PRESENCE_NAME || "r1ck";\nconst presenceDetails = process.env.PRESENCE_DETAILS || "Online";\nconst presenceState = process.env.PRESENCE_STATE || "Discord bot is running";\n\nif (!TOKEN) {\n  console.error("Missing DISCORD_BOT_TOKEN. Add it to the deployment environment.");\n  process.exit(1);\n}\n\nconst client = new Client({ intents: [GatewayIntentBits.Guilds] });\nconst app = express();\nlet readyAt = null;\nlet shuttingDown = false;\n\nfunction statusPayload() {\n  return { ok: Boolean(readyAt) && !shuttingDown, discordReady: client.isReady(), readyAt };\n}\n\napp.get("/", (_req, res) => {\n  res.json({ service: "discord-presence-bot", ...statusPayload() });\n});\n\napp.get("/healthz", (_req, res) => {\n  const status = statusPayload();\n  res.status(status.ok ? 200 : 503).json(status);\n});\n\nconst server = app.listen(PORT, HOST, () => {\n  console.log("Health server listening on http://" + HOST + ":" + PORT);\n});\n\nclient.once("ready", () => {\n  readyAt = new Date().toISOString();\n  client.user.setPresence({\n    status: "online",\n    activities: [{ name: presenceName, type: ActivityType.Playing, details: presenceDetails, state: presenceState }],\n  });\n  console.log("Logged in as " + client.user.tag);\n  console.log("Presence configured for " + presenceName);\n});\n\nclient.on("error", (error) => {\n  console.error("[discord] client error:", error.message);\n});\n\nclient.on("shardError", (error) => {\n  console.error("[discord] gateway error:", error.message);\n});\n\nfunction shutdown(signal) {\n  if (shuttingDown) return;\n  shuttingDown = true;\n  console.log("Received " + signal + "; shutting down gracefully.");\n  const forceExit = setTimeout(() => process.exit(1), 10000);\n  forceExit.unref();\n  server.close(() => {\n    client.destroy();\n    clearTimeout(forceExit);\n    process.exit(0);\n  });\n}\n\nprocess.once("SIGTERM", () => shutdown("SIGTERM"));\nprocess.once("SIGINT", () => shutdown("SIGINT"));\n\nclient.login(TOKEN).catch((error) => {\n  console.error("[discord] login failed:", error.message);\n  server.close(() => process.exit(1));\n});\n
+"use strict";
+
+const express = require("express");
+const { ActivityType, Client, GatewayIntentBits } = require("discord.js");
+
+const PORT = Number(process.env.PORT || 3000);
+const HOST = process.env.HOST || "0.0.0.0";
+const TOKEN = process.env.DISCORD_BOT_TOKEN;
+const presenceName = process.env.PRESENCE_NAME || "r1ck";
+const presenceDetails = process.env.PRESENCE_DETAILS || "Online";
+const presenceState = process.env.PRESENCE_STATE || "Discord bot is running";
+
+if (!TOKEN) {
+  console.error("Missing DISCORD_BOT_TOKEN. Add it to the deployment environment.");
+  process.exit(1);
+}
+
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const app = express();
+let readyAt = null;
+let shuttingDown = false;
+
+function statusPayload() {
+  return { ok: Boolean(readyAt) && !shuttingDown, discordReady: client.isReady(), readyAt };
+}
+
+app.get("/", (_req, res) => {
+  res.json({ service: "discord-presence-bot", ...statusPayload() });
+});
+
+app.get("/healthz", (_req, res) => {
+  const status = statusPayload();
+  res.status(status.ok ? 200 : 503).json(status);
+});
+
+const server = app.listen(PORT, HOST, () => {
+  console.log("Health server listening on http://" + HOST + ":" + PORT);
+});
+
+client.once("ready", () => {
+  readyAt = new Date().toISOString();
+  client.user.setPresence({
+    status: "online",
+    activities: [{ name: presenceName, type: ActivityType.Playing, details: presenceDetails, state: presenceState }],
+  });
+  console.log("Logged in as " + client.user.tag);
+  console.log("Presence configured for " + presenceName);
+});
+
+client.on("error", (error) => {
+  console.error("[discord] client error:", error.message);
+});
+
+client.on("shardError", (error) => {
+  console.error("[discord] gateway error:", error.message);
+});
+
+function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log("Received " + signal + "; shutting down gracefully.");
+  const forceExit = setTimeout(() => process.exit(1), 10000);
+  forceExit.unref();
+  server.close(() => {
+    client.destroy();
+    clearTimeout(forceExit);
+    process.exit(0);
+  });
+}
+
+process.once("SIGTERM", () => shutdown("SIGTERM"));
+process.once("SIGINT", () => shutdown("SIGINT"));
+
+client.login(TOKEN).catch((error) => {
+  console.error("[discord] login failed:", error.message);
+  server.close(() => process.exit(1));
+});
