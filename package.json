@@ -1,1 +1,13 @@
-{\n  "name": "discord-rpc-247",\n  "version": "1.1.0",\n  "private": true,\n  "description": "A Discord bot with supported activity presence and health checks.",\n  "main": "index.js",\n  "scripts": { "start": "node index.js" },\n  "engines": { "node": ">=18" },\n  "dependencies": {\n    "discord.js": "^14.16.3",\n    "express": "^4.21.2"\n  }\n}\n
+{
+  "name": "discord-rpc-247",
+  "version": "1.1.0",
+  "private": true,
+  "description": "A Discord bot with supported activity presence and health checks.",
+  "main": "index.js",
+  "scripts": { "start": "node index.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "express": "^4.21.2"
+  }
+}
